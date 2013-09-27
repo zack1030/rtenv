@@ -297,7 +297,7 @@ void queue_str_task(const char *str, int delay)
 
 	while (1) {
 		/* Post the message.  Keep on trying until it is successful. */
-		write(fdout, str, msg_len);
+//		write(fdout, str, msg_len);
 
 		/* Wait. */
 		sleep(delay);
@@ -312,6 +312,59 @@ void queue_str_task1()
 void queue_str_task2()
 {
 	queue_str_task("Hello 2\n", 50);
+}
+
+void shell_task()
+{
+	int fdout, fdin;
+	char c;
+	fdout = open("/dev/tty0/out", 0);
+	fdin = open("/dev/tty0/in", 0);
+
+	char cmd_buf[16] = {0};
+	int cmd_buf_count = 0;
+	//char num_ascii[11] = "0123456789";
+	while (1) {
+		read(fdin, &c, 1);
+		/*
+		int i, j;
+		for (i = 100; i >= 1; i /= 10) {
+			for (j = 1; j <= 10; j++) {
+				if (j * i > c) {
+					write(fdout, num_ascii+j-1, 1);
+					c -= i*(j-1);
+					break;
+				}
+			}
+		}
+		write(fdout, "\r\n", 2);
+		*/
+		
+		write(fdout, &c, 1);
+		if (c == 13) {
+			write(fdout, "\r\n", 2);
+			if (strcmp(cmd_buf, "ps") == 0) write(fdout, "hw1-1", 5);
+			else if (strcmp(cmd_buf, "echo") == 0) write(fdout, "hw1-2", 5);
+			else if (strcmp(cmd_buf, "hello") == 0) write(fdout, "hw1-3", 5);
+			else {
+				write(fdout, "Command: ", 10);
+				write(fdout, cmd_buf, cmd_buf_count);
+			}
+			write(fdout, "\r\n#", 3);
+			memset(cmd_buf, 0, cmd_buf_count);
+			cmd_buf_count = 0;
+		}
+		else if (cmd_buf_count >= 15) {
+			write(fdout, "\r\nWRONG COMMAND", 15);
+			write(fdout, "\r\n#", 3);
+			memset(cmd_buf, 0, cmd_buf_count);
+			cmd_buf_count = 0;
+		}
+		else {
+			cmd_buf[cmd_buf_count] = c;
+			cmd_buf_count += 1;
+		}
+	}
 }
 
 void serial_readwrite_task()
@@ -368,7 +421,8 @@ void first()
 	if (!fork()) rs232_xmit_msg_task();
 	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), queue_str_task1();
 	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), queue_str_task2();
-	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), serial_readwrite_task();
+	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), shell_task();
+//	if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), serial_readwrite_task();
 
 	setpriority(0, PRIORITY_LIMIT);
 
