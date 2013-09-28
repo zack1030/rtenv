@@ -246,7 +246,7 @@ void serialin(USART_TypeDef* uart, unsigned int intr)
 void greeting()
 {
 	int fdout = open("/dev/tty0/out", 0);
-	char *string = "Hello, World!\n";
+	char *string = "Hello, World!\n\r";
 	while (*string) {
 		write(fdout, string, 1);
 		string++;
@@ -323,10 +323,10 @@ void shell_task()
 
 	char cmd_buf[16] = {0};
 	int cmd_buf_count = 0;
-	//char num_ascii[11] = "0123456789";
 	while (1) {
 		read(fdin, &c, 1);
 		/*
+		char num_ascii[11] = "0123456789";
 		int i, j;
 		for (i = 100; i >= 1; i /= 10) {
 			for (j = 1; j <= 10; j++) {
@@ -339,18 +339,35 @@ void shell_task()
 		}
 		write(fdout, "\r\n", 2);
 		*/
-		
+
 		write(fdout, &c, 1);
 		if (c == 13) {
 			write(fdout, "\r\n", 2);
+
+			//set param pointer
+			int i;
+			char *param;
+			for (i = 0; i < cmd_buf_count; i++) {
+				if (cmd_buf[i] == 32) {
+					cmd_buf[i] = 0;
+					param = &cmd_buf[i+1];
+					break;
+				}
+			}
 			if (strcmp(cmd_buf, "ps") == 0) write(fdout, "hw1-1", 5);
-			else if (strcmp(cmd_buf, "echo") == 0) write(fdout, "hw1-2", 5);
-			else if (strcmp(cmd_buf, "hello") == 0) write(fdout, "hw1-3", 5);
+			else if (strcmp(cmd_buf, "echo") == 0) {
+				write(fdout, param, cmd_buf_count - i);
+				write(fdout, "\r\n", 2);
+			}
+			else if (strcmp(cmd_buf, "hello") == 0) {
+				greeting();
+			}
 			else {
 				write(fdout, "Command: ", 10);
 				write(fdout, cmd_buf, cmd_buf_count);
+				write(fdout, "\r\n", 2);
 			}
-			write(fdout, "\r\n#", 3);
+			write(fdout, "#", 1);
 			memset(cmd_buf, 0, cmd_buf_count);
 			cmd_buf_count = 0;
 		}
